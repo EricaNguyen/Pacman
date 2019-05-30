@@ -10,7 +10,7 @@ import util
 #################
 
 def createTeam(firstIndex, secondIndex, isRed,
-        first = 'DummyAgent', second = 'DefensiveReflexAgent'):
+        first = 'DummyAgent', second = 'DummyAgent'):
     """
     This function should return a list of two agents that will form the
     team, initialized using firstIndex and secondIndex as their agent
@@ -120,6 +120,7 @@ class DummyAgent(captureAgents.CaptureAgent):
         oldFood = self.getFood(currentGameState)
         #newGhostStates = successorGameState.getGhostStates()
         newEnemyStates = [successor.getAgentState(i) for i in self.getOpponents(successor)]
+        newTeamPosition = [successor.getAgentState(i) for i in self.getTeam(successor)]
         danger = [a for a in newEnemyStates if a.isPacman is False and a.getPosition() != None]
         newScaredTimes = [ghostState.scaredTimer for ghostState in danger]
 
@@ -140,6 +141,9 @@ class DummyAgent(captureAgents.CaptureAgent):
                     return 1 #if a dangerous ghost is nearby
             
         minDistance = min([self.getMazeDistance(newPosition, food) for food in foodList])
+        # distance = self.getMazeDistance(newTeamPosition[0].getPosition(),newTeamPosition[1].getPosition())
+        if newTeamPosition[0].isPacman and newTeamPosition[1].isPacman and self.getMazeDistance(newTeamPosition[0].getPosition(),newTeamPosition[1].getPosition()) < 4: 
+            return 999 - minDistance - 2
         return 999-minDistance #gives a higher value the closer pacman is to food
  
  
