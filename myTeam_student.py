@@ -32,6 +32,111 @@ def createTeam(firstIndex, secondIndex, isRed,
 ##########
 # Agents #
 ##########
+class ReflexCaptureAgent(captureAgents.CaptureAgent):
+    
+    def chooseActions(self, gameState):
+        actions = gameState.getLegalActions(self.index)
+        values = [self.evaluate(gameState, a) for a in actions]
+        maxValue = max(values)
+        bestActions = [a for a, v in zip(actions, values) if v == MaxValue]
+        return random.choice(bestActions)
+
+    def getSucessor(self, gameState, action):
+        successor = gameState.generateSuccessor(self.index, action)
+        pos = successor.getAgentState(self.index).getPosition()
+        if pos != util.nearestPoint(pos):
+            return successor.generateSuccessor(self.index, action)
+        else:
+            return successor
+    def evaluate(self, gameState, action):
+        features = self.getFeatures(gameState, action)
+        weights = self.getWeights(gameState, action)
+
+        return features * weights
+
+    def getFeatures(self, gameState, action):
+        """
+        Returns a counter of features for the state
+        """
+
+        features = util.Counter()
+        successor = self.getSuccessor(gameState, action)
+        features['successorScore'] = self.getScore(successor)
+
+        return features
+
+    def getWeights(self, gameState, action):
+        """
+        Normally, weights do not depend on the gamestate.
+        They can be either a counter or a dictionary.
+        """
+
+        return {'successorScore': 1.0}
+
+
+class OffensiveReflexAgent(ReflexCaptureAgent):
+    """
+    A reflex agent that seeks food. This is an agent
+    we give you to get an idea of what an offensive agent might look like,
+    but it is by no means the best or only way to build an offensive agent.
+    """
+
+    def getFeatures(self, gameState, action):
+                
+        successorGameState = self.getSuccessor(currentGameState, action)
+        successor = currentGameState.generateSuccessor(self.index, action)
+        newPosition = successor.getAgentState(self.index).getPosition()
+        oldFood = self.getFood(currentGameState)
+        #newGhostStates = successorGameState.getGhostStates()
+        newEnemyStates = [successor.getAgentState(i) for i in self.getOpponents(successor)]
+        newTeamPosition = [successor.getAgentState(i) for i in self.getTeam(successor)]
+        danger = [a for a in newEnemyStates if a.isPacman is False and a.getPosition() != None]
+        newScaredTimes = [ghostState.scaredTimer for ghostState in danger]
+        
+        score = self.getScore(successor)
+        g = 0
+        f = 0
+        m = 0
+        
+        foodList = oldFood.asList()
+        if len(danger) > 0:
+            for ghost in danger:
+                ghostPosition = ghost.getPosition()
+                (gX, gY) = (ghostPosition[0], ghostPosition[1])
+                dist = abs(gX - pX) + abs(gY - pY)
+                if dist > 0:
+                    g = -(1 / (dist * dist * dist * dist))
+                
+        # Compute distance to the nearest food
+        foodList = self.getFood(successor).asList()
+        beforeFood = self.getFood(gameState).asList()
+        if newPosition in beforeFood:
+            f = 1
+        if len(foodList) > 0:  # This should always be True, but better safe than sorry
+            myPos = successor.getAgentState(self.index).getPosition()
+            minDistance = min([self.getMazeDistance(myPos, food) for food in foodList])
+            m = 1/minDistance
+
+        return {
+                'food' : f,
+                'closestfood' : m,
+                'ghost' : g,
+                'score' : score
+        }
+
+    def getWeights(self, gameState, action):
+        return {
+            'food': 50,
+            'closestfood': 10,
+             'ghost' : 1000,
+             'score' : 1
+        }
+
+
+
+
+
+
 
 class DummyAgent(captureAgents.CaptureAgent):
     """
