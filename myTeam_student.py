@@ -10,7 +10,7 @@ import util
 #################
 
 def createTeam(firstIndex, secondIndex, isRed,
-        first = 'OffensiveReflexAgent', second = 'OffensiveReflexAgent'):
+        first = 'DummyAgent', second = 'OffensiveReflexAgent'):
     """
     This function should return a list of two agents that will form the
     team, initialized using firstIndex and secondIndex as their agent
@@ -79,15 +79,15 @@ class OffensiveReflexAgent(ReflexCaptureAgent):
     we give you to get an idea of what an offensive agent might look like,
     but it is by no means the best or only way to build an offensive agent.
     """
-
-    def getFeatures(self, currentGameState, action):
+        
+    def getFeatures(self, gameState, action):
                 
-        successorGameState = self.getSuccessor(currentGameState, action)
-        successor = currentGameState.generateSuccessor(self.index, action)
+        successorGameState = self.getSuccessor(gameState, action)
+        successor = gameState.generateSuccessor(self.index, action)
         newPosition = successor.getAgentState(self.index).getPosition()
-        oldFood = self.getFood(currentGameState)
+        oldFood = self.getFood(gameState)
         newEnemyStates = [successor.getAgentState(i) for i in self.getOpponents(successor)]
-        newTeamPosition = [successor.getAgentState(i) for i in self.getTeam(successor)]
+        #newTeamPosition = [successor.getAgentState(i) for i in self.getTeam(successor)]
         danger = [a for a in newEnemyStates if a.isPacman is False and a.getPosition() != None]
         newScaredTimes = [ghostState.scaredTimer for ghostState in danger]
         
@@ -101,13 +101,14 @@ class OffensiveReflexAgent(ReflexCaptureAgent):
             for ghost in danger:
                 ghostPosition = ghost.getPosition()
                 (gX, gY) = (ghostPosition[0], ghostPosition[1])
+                (pX, pY) = (newPosition)
                 dist = abs(gX - pX) + abs(gY - pY)
                 if dist > 0:
                     g = -(1 / (dist * dist * dist * dist))
                 
         # Compute distance to the nearest food
         foodList = self.getFood(successor).asList()
-        beforeFood = self.getFood(currentGameState).asList()
+        beforeFood = self.getFood(gameState).asList()
         if newPosition in beforeFood:
             f = 1
         if len(foodList) > 0:  # This should always be True, but better safe than sorry
@@ -116,10 +117,10 @@ class OffensiveReflexAgent(ReflexCaptureAgent):
             m = 1/minDistance
 
         return util.Counter({
-                'food' : f,
-                'closestfood' : m,
-                'ghost' : g,
-                'score' : score
+            'food' : f,
+            'closestfood' : m,
+            'ghost' : g,
+            'score' : score
         })
 
     def getWeights(self, gameState, action):
@@ -136,6 +137,7 @@ class DefensiveReflexAgent(ReflexCaptureAgent):
     Again, this is to give you an idea of what a defensive agent could be like.
     It is not the best or only way to make such an agent.
     """
+        
     def getFeatures(self, gameState, action):
         features = util.Counter()
         successor = self.getSuccessor(gameState, action)
@@ -203,6 +205,8 @@ class DummyAgent(captureAgents.CaptureAgent):
         """
 
         captureAgents.CaptureAgent.registerInitialState(self, gameState)
+        print("width: ", gameState.data.layout.width)
+        print("height: ", gameState.data.layout.height)
         """ 
         Your initialization code goes here, if you need any.
         """
@@ -243,8 +247,9 @@ class DummyAgent(captureAgents.CaptureAgent):
         successorGameState = self.getSuccessor(currentGameState, action)
         successor = currentGameState.generateSuccessor(self.index, action)
         newPosition = successor.getAgentState(self.index).getPosition()
-        oldFood = self.getFood(currentGameState)
+        oldFood = self.getFood(currentGameState) 
         newEnemyStates = [successor.getAgentState(i) for i in self.getOpponents(successor)] #successor state of each enemy
+        newTeamPosition = [successor.getAgentState(i) for i in self.getTeam(successor)]
         danger = [a for a in newEnemyStates if a.isPacman is False and a.getPosition() != None] #list of each enemy that can kill
         newScaredTimes = [ghostState.scaredTimer for ghostState in danger]
 
@@ -278,8 +283,8 @@ class DummyAgent(captureAgents.CaptureAgent):
                 return 1 #if a dangerous ghost is nearby, try to avoid that space
         
         minDistance = min([self.getMazeDistance(newPosition, food) for food in foodList])
-        # if newTeamPosition[0].isPacman and newTeamPosition[1].isPacman and self.getMazeDistance(newTeamPosition[0].getPosition(),newTeamPosition[1].getPosition()) < 4: 
-        #     return 999 - minDistance - 2
+        if newTeamPosition[0].isPacman and newTeamPosition[1].isPacman and self.getMazeDistance(newTeamPosition[0].getPosition(),newTeamPosition[1].getPosition()) < 4: 
+            return 999 - minDistance - 2
         return 999-minDistance #gives a higher value the closer pacman is to food
- 
+    
  
