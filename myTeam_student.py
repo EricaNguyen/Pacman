@@ -10,7 +10,7 @@ import util
 #################
 
 def createTeam(firstIndex, secondIndex, isRed,
-        first = 'DummyAgent', second = 'DummyAgent'):
+        first = 'OffensiveReflexAgent', second = 'OffensiveReflexAgent'):
     """
     This function should return a list of two agents that will form the
     team, initialized using firstIndex and secondIndex as their agent
@@ -33,14 +33,14 @@ def createTeam(firstIndex, secondIndex, isRed,
 ##########
 class ReflexCaptureAgent(captureAgents.CaptureAgent):
     
-    def chooseActions(self, gameState):
+    def chooseAction(self, gameState):
         actions = gameState.getLegalActions(self.index)
         values = [self.evaluate(gameState, a) for a in actions]
         maxValue = max(values)
-        bestActions = [a for a, v in zip(actions, values) if v == MaxValue]
+        bestActions = [a for a, v in zip(actions, values) if v == maxValue]
         return random.choice(bestActions)
 
-    def getSucessor(self, gameState, action):
+    def getSuccessor(self, gameState, action):
         successor = gameState.generateSuccessor(self.index, action)
         pos = successor.getAgentState(self.index).getPosition()
         if pos != util.nearestPoint(pos):
@@ -80,7 +80,7 @@ class OffensiveReflexAgent(ReflexCaptureAgent):
     but it is by no means the best or only way to build an offensive agent.
     """
 
-    def getFeatures(self, gameState, action):
+    def getFeatures(self, currentGameState, action):
                 
         successorGameState = self.getSuccessor(currentGameState, action)
         successor = currentGameState.generateSuccessor(self.index, action)
@@ -107,7 +107,7 @@ class OffensiveReflexAgent(ReflexCaptureAgent):
                 
         # Compute distance to the nearest food
         foodList = self.getFood(successor).asList()
-        beforeFood = self.getFood(gameState).asList()
+        beforeFood = self.getFood(currentGameState).asList()
         if newPosition in beforeFood:
             f = 1
         if len(foodList) > 0:  # This should always be True, but better safe than sorry
@@ -115,20 +115,20 @@ class OffensiveReflexAgent(ReflexCaptureAgent):
             minDistance = min([self.getMazeDistance(myPos, food) for food in foodList])
             m = 1/minDistance
 
-        return {
+        return util.Counter({
                 'food' : f,
                 'closestfood' : m,
                 'ghost' : g,
                 'score' : score
-        }
+        })
 
     def getWeights(self, gameState, action):
-        return {
+        return util.Counter({
             'food': 50,
             'closestfood': 10,
              'ghost' : 1000,
              'score' : 1
-        }
+        })
 
 class DefensiveReflexAgent(ReflexCaptureAgent):
     """
@@ -278,8 +278,8 @@ class DummyAgent(captureAgents.CaptureAgent):
                 return 1 #if a dangerous ghost is nearby, try to avoid that space
         
         minDistance = min([self.getMazeDistance(newPosition, food) for food in foodList])
-        if newTeamPosition[0].isPacman and newTeamPosition[1].isPacman and self.getMazeDistance(newTeamPosition[0].getPosition(),newTeamPosition[1].getPosition()) < 4: 
-            return 999 - minDistance - 2
+        # if newTeamPosition[0].isPacman and newTeamPosition[1].isPacman and self.getMazeDistance(newTeamPosition[0].getPosition(),newTeamPosition[1].getPosition()) < 4: 
+        #     return 999 - minDistance - 2
         return 999-minDistance #gives a higher value the closer pacman is to food
  
  
