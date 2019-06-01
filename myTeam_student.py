@@ -2,6 +2,7 @@ import random
 import time
 
 import captureAgents
+import capture
 import game
 import util
 
@@ -10,7 +11,7 @@ import util
 #################
 
 def createTeam(firstIndex, secondIndex, isRed,
-        first = 'DummyAgent', second = 'OffensiveReflexAgent'):
+        first = 'NomNomAgent', second = 'OffensiveReflexAgent'):
     """
     This function should return a list of two agents that will form the
     team, initialized using firstIndex and secondIndex as their agent
@@ -35,6 +36,7 @@ class ReflexCaptureAgent(captureAgents.CaptureAgent):
     
     def chooseAction(self, gameState):
         actions = gameState.getLegalActions(self.index)
+        #actions.remove('Stop')
         values = [self.evaluate(gameState, a) for a in actions]
         maxValue = max(values)
         bestActions = [a for a, v in zip(actions, values) if v == maxValue]
@@ -87,7 +89,6 @@ class OffensiveReflexAgent(ReflexCaptureAgent):
         newPosition = successor.getAgentState(self.index).getPosition()
         oldFood = self.getFood(gameState)
         newEnemyStates = [successor.getAgentState(i) for i in self.getOpponents(successor)]
-        #newTeamPosition = [successor.getAgentState(i) for i in self.getTeam(successor)]
         danger = [a for a in newEnemyStates if a.isPacman is False and a.getPosition() != None]
         newScaredTimes = [ghostState.scaredTimer for ghostState in danger]
         
@@ -109,12 +110,13 @@ class OffensiveReflexAgent(ReflexCaptureAgent):
         # Compute distance to the nearest food
         foodList = self.getFood(successor).asList()
         beforeFood = self.getFood(gameState).asList()
+        
         if newPosition in beforeFood:
             f = 1
         if len(foodList) > 0:  # This should always be True, but better safe than sorry
             myPos = successor.getAgentState(self.index).getPosition()
             minDistance = min([self.getMazeDistance(myPos, food) for food in foodList])
-            m = 1/minDistance
+            m = abs(1/minDistance)
 
         return util.Counter({
             'food' : f,
@@ -125,10 +127,10 @@ class OffensiveReflexAgent(ReflexCaptureAgent):
 
     def getWeights(self, gameState, action):
         return util.Counter({
-            'food': 50,
-            'closestfood': 10,
-             'ghost' : 1000,
-             'score' : 1
+            'food': 500,
+            'closestfood': 100,
+            'ghost' : 1000,
+            'score' : 1
         })
 
 class DefensiveReflexAgent(ReflexCaptureAgent):
@@ -178,12 +180,7 @@ class DefensiveReflexAgent(ReflexCaptureAgent):
         }
 
         
-class DummyAgent(captureAgents.CaptureAgent):
-    """
-    A Dummy agent to serve as an example of the necessary agent structure.
-    You should look at baselineTeam.py for more details about how to
-    create an agent as this is the bare minimum.
-    """
+class NomNomAgent(captureAgents.CaptureAgent):
 
     def registerInitialState(self, gameState):
         """
@@ -205,28 +202,20 @@ class DummyAgent(captureAgents.CaptureAgent):
         """
 
         captureAgents.CaptureAgent.registerInitialState(self, gameState)
-        print("width: ", gameState.data.layout.width)
-        print("height: ", gameState.data.layout.height)
+        #print("width: ", gameState.data.layout.width)
+        #print("height: ", gameState.data.layout.height)
         """ 
         Your initialization code goes here, if you need any.
         """
 
     def chooseAction(self, gameState):
-        """
-        Picks among actions randomly.
-        """
-        actions = gameState.getLegalActions(self.index)
+        actions = gameState.getLegalActions(self.index) #list of possible actions
 
-        """ 
-        You should change this in your own agent.
-        """
-        # Choose one of the best actions
+        # Choose the best action
         scores = [self.evaluationFunction(gameState, action) for action in actions]
         bestScore = max(scores)
         bestIndices = [index for index in range(len(scores)) if scores[index] == bestScore]
-        chosenIndex = random.choice(bestIndices) # Pick randomly among the best
-
-        # *** Add more of your code here if you want to ***
+        chosenIndex = random.choice(bestIndices) # Pick randomly among the best, if there's more than 1
 
         return actions[chosenIndex]
         
@@ -244,9 +233,8 @@ class DummyAgent(captureAgents.CaptureAgent):
             return successor
         
     def evaluationFunction(self, currentGameState, action):
-        successorGameState = self.getSuccessor(currentGameState, action)
-        successor = currentGameState.generateSuccessor(self.index, action)
-        newPosition = successor.getAgentState(self.index).getPosition()
+        successor = currentGameState.generateSuccessor(self.index, action) #successor game state after this agent moves
+        newPosition = successor.getAgentState(self.index).getPosition() #agent's position after moving
         oldFood = self.getFood(currentGameState) 
         newEnemyStates = [successor.getAgentState(i) for i in self.getOpponents(successor)] #successor state of each enemy
         newTeamPosition = [successor.getAgentState(i) for i in self.getTeam(successor)]
@@ -258,15 +246,16 @@ class DummyAgent(captureAgents.CaptureAgent):
         #priority from low to high:
         #has danger
         #danger nearby
+        #dead end with no food
         #free space / edible ghost (considered netural option)
         #enemy pacman nearby
         #has capsule
         #has food
         
-        currEnemies = [currentGameState.getAgentState(j) for j in self.getOpponents(currentGameState)] #eat enemy pacman if they are right next to this agent
+        currEnemies = [currentGameState.getAgentState(j) for j in self.getOpponents(currentGameState)] 
         for e in currEnemies:
             if e.getPosition() != None and e.isPacman and e.getPosition() == newPosition and successor.getAgentState(self.index).isPacman is False and currentGameState.getAgentState(self.index).scaredTimer == 0:
-                return 999
+                return 999 #eat edible enemy if they are right next to this agent
         
         foodList = oldFood.asList() #list of food positions
         for enemy in newEnemyStates:
@@ -279,8 +268,23 @@ class DummyAgent(captureAgents.CaptureAgent):
         for ghost in danger:
             if ghost.getPosition() == newPosition and ghost.scaredTimer == 0: 
                 return 0 #if next space has a dangerous ghost, avoid that space
-            if self.getMazeDistance(newPosition, ghost.getPosition()) < 2 and ghost.scaredTimer < 2:
+            if self.getMazeDistance(newPosition, ghost.getPosition()) < 2 and ghost.scaredTimer < 1: #ghost.scaredTimer < 2
                 return 1 #if a dangerous ghost is nearby, try to avoid that space
+        
+        #if next space does not have anything to eat and theres a wall on 3 sides, try to avoid that space bc its easy to get trapped in by a ghost
+        if newPosition not in foodList:
+            x, y = newPosition
+            wallCount = 0
+            if successor.hasWall(int(x+1), int(y)) is True:
+                wallCount +=1
+            if successor.hasWall(int(x), int(y+1)) is True:
+                wallCount +=1
+            if successor.hasWall(int(x-1), int(y)) is True:
+                wallCount +=1
+            if successor.hasWall(int(x), int(y-1)) is True:
+                wallCount +=1
+            if wallCount >= 3:
+                return 2
         
         minDistance = min([self.getMazeDistance(newPosition, food) for food in foodList])
         if newTeamPosition[0].isPacman and newTeamPosition[1].isPacman and self.getMazeDistance(newTeamPosition[0].getPosition(),newTeamPosition[1].getPosition()) < 4: 
